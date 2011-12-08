@@ -2,10 +2,12 @@
 // August 2011 by Limor Fried / Ladyada / Adafruit
 // Jan 2011 by Bill Westfield ("WestfW")
 //
+// Tweaks by Mike Tsao
+//
 // this sketch allows an Arduino to program a flash program
 // into any AVR if you can fit the HEX file into program memory
 // No computer is necessary. Two LEDs for status notification
-// Press button to program a new chip. Piezo beeper for error/success 
+// Press button to program a new chip. Piezo beeper for error/success
 // This is ideal for very fast mass-programming of chips!
 //
 // It is based on AVRISP
@@ -26,8 +28,7 @@
 
 // Global Variables
 int pmode=0;
-byte pageBuffer[128];		       /* One page of flash */
-
+byte pageBuffer[128];                  /* One page of flash */
 
 /*
  * Pins to target
@@ -42,8 +43,9 @@ byte pageBuffer[128];		       /* One page of flash */
 #define PIEZOPIN A3
 
 void setup () {
-  Serial.begin(57600);			/* Initialize serial for status msgs */
-  Serial.println("\nAdaBootLoader Bootstrap programmer (originally OptiLoader Bill Westfield (WestfW))");
+  Serial.begin(57600);  // Initialize serial for status msgs
+  Serial.println("\nAdaBootLoader Bootstrap programmer "
+		 "(originally OptiLoader Bill Westfield (WestfW))");
 
   pinMode(PIEZOPIN, OUTPUT);
 
@@ -54,7 +56,7 @@ void setup () {
 
   pinMode(BUTTON, INPUT);     // button for next programming
   digitalWrite(BUTTON, HIGH); // pullup
-  
+
   pinMode(CLOCK, OUTPUT);
   // setup high freq PWM on pin 9 (timer 1)
   // 50% duty cycle -> 8 MHz
@@ -63,66 +65,77 @@ void setup () {
   // OC1A output, fast PWM
   TCCR1A = _BV(WGM11) | _BV(COM1A1);
   TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10); // no clock prescale
-  
 }
 
 void loop (void) {
   Serial.println("\nType 'G' or hit BUTTON for next chip");
   while (1) {
     if  ((! digitalRead(BUTTON)) || (Serial.read() == 'G'))
-      break;  
+      break;
   }
-    
-  target_poweron();			/* Turn on target power */
+
+  target_poweron();                     /* Turn on target power */
 
   uint16_t signature;
   image_t *targetimage;
-        
-  if (! (signature = readSignature()))		// Figure out what kind of CPU
+
+  if (! (signature = readSignature())) {  // Figure out what kind of CPU
     error("Signature fail");
-  if (! (targetimage = findImage(signature)))	// look for an image
+    return;
+  }
+  if (! (targetimage = findImage(signature))) {	// look for an image
     error("Image fail");
-  
+    return;
+  }
+
   eraseChip();
 
-  if (! programFuses(targetimage->image_progfuses))	// get fuses ready to program
+  // get fuses ready to program
+  if (! programFuses(targetimage->image_progfuses)) {  
     error("Programming Fuses fail");
-  
+    return;
+  }
+
   if (! verifyFuses(targetimage->image_progfuses, targetimage->fusemask) ) {
     error("Failed to verify fuses");
-  } 
+    return;
+  }
 
   end_pmode();
   start_pmode();
 
-  byte *hextext = targetimage->image_hexcode;  
+  byte *hextext = targetimage->image_hexcode;
   uint16_t pageaddr = 0;
   uint8_t pagesize = pgm_read_byte(&targetimage->image_pagesize);
   uint16_t chipsize = pgm_read_word(&targetimage->chipsize);
-        
+
   //Serial.println(chipsize, DEC);
   while (pageaddr < chipsize) {
-     byte *hextextpos = readImagePage (hextext, pageaddr, pagesize, pageBuffer);
-          
-     boolean blankpage = true;
-     for (uint8_t i=0; i<pagesize; i++) {
-       if (pageBuffer[i] != 0xFF) blankpage = false;
-     }          
-     if (! blankpage) {
-       if (! flashPage(pageBuffer, pageaddr, pagesize))	
-	 error("Flash programming failed");
-     }
-     hextext = hextextpos;
-     pageaddr += pagesize;
+    byte *hextextpos = readImagePage (hextext, pageaddr, pagesize, pageBuffer);
+
+    boolean blankpage = true;
+    for (uint8_t i=0; i<pagesize; i++) {
+      if (pageBuffer[i] != 0xFF) blankpage = false;
+    }
+    if (! blankpage) {
+      if (! flashPage(pageBuffer, pageaddr, pagesize)) {
+	error("Flash programming failed");
+	return;
+      }
+    }
+    hextext = hextextpos;
+    pageaddr += pagesize;
   }
-  
+
   // Set fuses to 'final' state
-  if (! programFuses(targetimage->image_normfuses))
+  if (! programFuses(targetimage->image_normfuses)) {
     error("Programming Fuses fail");
-    
+    return;
+  }
+
   end_pmode();
   start_pmode();
-  
+
   Serial.println("\nVerifing flash...");
   if (! verifyImage(targetimage->image_hexcode) ) {
     error("Failed to verify chip");
@@ -135,26 +148,39 @@ void loop (void) {
   } else {
     Serial.println("Fuses verified correctly!");
   }
-  target_poweroff();			/* turn power off */
-  tone(PIEZOPIN, 4000, 200);
+  target_poweroff();
+  tone(PIEZOPIN, 523, 100);
+  delay(400);
+  tone(PIEZOPIN, 523, 200);
+  delay(200);
+  tone(PIEZOPIN, 698, 800);
 }
 
-
-
-void error(char *string) { 
-  Serial.println(string); 
-  digitalWrite(LED_ERR, HIGH);  
-  while(1) {
-    tone(PIEZOPIN, 4000, 500);
+void error(char *string) {
+  while (!digitalRead(BUTTON)) ;
+  Serial.println(string);
+  target_poweroff();
+  while (digitalRead(BUTTON)) {
+    digitalWrite(LED_ERR, HIGH);
+    digitalWrite(LED_PROGMODE, LOW);
+    tone(PIEZOPIN, 622, 500);
+    delay(500);
+    digitalWrite(LED_ERR, LOW);
+    digitalWrite(LED_PROGMODE, HIGH);
+    tone(PIEZOPIN, 460, 500);
+    delay(500);
   }
+  while (!digitalRead(BUTTON)) ;
+  digitalWrite(LED_ERR, LOW);
+  digitalWrite(LED_PROGMODE, LOW);
 }
 
 void start_pmode () {
   pinMode(13, INPUT); // restore to default
 
   SPI.begin();
-  SPI.setClockDivider(SPI_CLOCK_DIV128); 
-  
+  SPI.setClockDivider(SPI_CLOCK_DIV128);
+
   debug("...spi_init done");
   // following delays may not work on all targets...
   pinMode(RESET, OUTPUT);
@@ -185,7 +211,6 @@ void end_pmode () {
   pmode = 0;
 }
 
-
 /*
  * target_poweron
  * begin programming
@@ -209,8 +234,3 @@ boolean target_poweroff ()
   digitalWrite(LED_PROGMODE, LOW);
   return true;
 }
-
-
-
-
-
