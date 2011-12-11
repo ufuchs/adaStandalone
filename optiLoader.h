@@ -31,7 +31,7 @@ typedef struct image {
   byte fusemask[4];
   uint16_t chipsize;
   byte image_pagesize;  // page size for flash programming
-  byte image_hexcode[20000];  // intel hex format image (text)
+  byte hexcode[20000];  // intel hex format image
 } image_t;
 
 typedef struct alias {
@@ -45,22 +45,22 @@ typedef struct alias {
 #define debug(string) // flashprint(PSTR(string));
 
 
-void pulse (int pin, int times);
-void flashprint (const char p[]);
+void pulse(int pin, int times);
+void flashprint(const char p[]);
 
-uint32_t spi_transaction (uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-image_t* findImage (uint16_t signature);
+uint32_t spi_transaction(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+image_t* findImage(uint16_t signature);
 
-uint16_t readSignature (void);
-boolean programFuses (const byte* fuses);
+uint16_t readSignature(void);
+boolean programFuses(const byte* fuses);
 void eraseChip(void);
-boolean verifyImage (byte* hextext);
+boolean verifyImage(const byte* hex, boolean as_hex);
 void busyWait(void);
-boolean flashPage (byte* pagebuff, uint16_t pageaddr, uint8_t pagesize);
-byte hexton (byte h);
-byte* readImagePage (byte* hextext, uint16_t pageaddr, uint8_t pagesize,
-                     byte* page);
-boolean verifyFuses (const byte* fuses, const byte* fusemask);
+boolean flashPage(byte* pagebuff, uint16_t pageaddr, uint8_t pagesize);
+byte hexton(byte h);
+const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
+                          uint8_t pagesize, byte* page);
+boolean verifyFuses(const byte* fuses, const byte* fusemask);
 void error(const char* string);
 
 #endif

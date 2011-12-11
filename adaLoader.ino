@@ -104,17 +104,25 @@ void loop(void) {
   end_pmode();
   start_pmode();
 
-  byte *hextext = targetimage->image_hexcode;
+  const byte* hex = targetimage->hexcode;
+  boolean as_hex = pgm_read_byte(hex) == ':';
   uint16_t pageaddr = 0;
   uint8_t pagesize = pgm_read_byte(&targetimage->image_pagesize);
   uint16_t chipsize = pgm_read_word(&targetimage->chipsize);
 
+  if (as_hex) {
+    Serial.println("Image interpreted as text");
+  } else {
+    Serial.println("Image interpreted as binary");
+  }
+
 #if 0
   Serial.println(chipsize, DEC);
 #endif
+  const byte* original_hex = hex;
   while (pageaddr < chipsize) {
-    byte *hextextpos = readImagePage(hextext, pageaddr, pagesize, pageBuffer);
-
+    const byte* hexpos = readImagePage(hex, as_hex, pageaddr, pagesize,
+                                       pageBuffer);
     boolean blankpage = true;
     for (uint8_t i = 0; i < pagesize; i++) {
       if (pageBuffer[i] != 0xFF) blankpage = false;
@@ -125,7 +133,7 @@ void loop(void) {
         return;
       }
     }
-    hextext = hextextpos;
+    hex = hexpos;
     pageaddr += pagesize;
   }
 
@@ -139,7 +147,7 @@ void loop(void) {
   start_pmode();
 
   Serial.println("\nVerifing flash...");
-  if (!verifyImage(targetimage->image_hexcode) ) {
+  if (!verifyImage(original_hex, as_hex) ) {
     error("Failed to verify chip");
   } else {
     Serial.println("\tFlash verified correctly!");

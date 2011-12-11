@@ -18,11 +18,12 @@ extern uint8_t NUMIMAGES;
 uint16_t readSignature (void) {
   SPI.setClockDivider(CLOCKSPEED_FUSES);
 
-  uint32_t target_type = 0;
-  Serial.print("\nReading signature: ");
+  uint16_t target_type = 0;
+  Serial.print("\nReading signature:");
 
-  target_type = (spi_transaction(0x30, 0x00, 0x01, 0x00) << 8) |
-    spi_transaction(0x30, 0x00, 0x02, 0x00);
+  target_type = spi_transaction(0x30, 0x00, 0x01, 0x00);
+  target_type <<= 8;
+  target_type |= spi_transaction(0x30, 0x00, 0x02, 0x00);
 
   Serial.println(target_type, HEX);
   if (target_type == 0 || target_type == 0xFFFF) {
@@ -161,49 +162,54 @@ boolean verifyFuses (const byte *fuses, const byte *fusemask)
   return true;
 }
 
+const byte* readNextOctet(const byte* p, boolean as_hex, byte& b) {
+  if (as_hex) {
+    b = hexton(pgm_read_byte(p++));
+    b = (b << 4) + hexton(pgm_read_byte(p++));
+  } else {
+    b = pgm_read_byte(p++);
+  }
+  return p;
+}
+
 /*
  * readImagePage
  *
  * Read a page of intel hex image from a string in pgm memory.
  */
-
-// Returns number of bytes decoded
-byte* readImagePage (byte* hextext, uint16_t pageaddr, uint8_t pagesize,
-                     byte* page) {
-  uint16_t len;
+const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
+                          uint8_t pagesize, byte* page) {
+  uint8_t len;
   uint8_t page_idx = 0;
-  byte *beginning = hextext;
+  const byte* beginning = hex;
 
   byte b, cksum = 0;
 
-  //Serial.print("page size = "); Serial.println(pagesize, DEC);
-
   // 'empty' the page by filling it with 0xFF's
-  for (uint8_t i=0; i<pagesize; i++)
+  for (uint8_t i = 0; i < pagesize; i++)
     page[i] = 0xFF;
 
-  while (1) {
+  while (true) {
     uint16_t lineaddr;
 
     // read one line!
-    if (pgm_read_byte(hextext++) != ':') {
-      error("No colon?");
-      break;
+    if (as_hex) {
+      if (pgm_read_byte(hex++) != ':') {
+        error("No colon?");
+        break;
+      }
     }
     // Read the byte count into 'len'
-    len = hexton(pgm_read_byte(hextext++));
-    len = (len<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, len);
     cksum = len;
 
     // read high address byte
-    b = hexton(pgm_read_byte(hextext++));
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
     lineaddr = b;
 
     // read low address byte
-    b = hexton(pgm_read_byte(hextext++));
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
     lineaddr = (lineaddr << 8) + b;
 
@@ -211,10 +217,12 @@ byte* readImagePage (byte* hextext, uint16_t pageaddr, uint8_t pagesize,
       return beginning;
     }
 
-    b = hexton(pgm_read_byte(hextext++)); // record type
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    // record type
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
-    //Serial.print("Record type "); Serial.println(b, HEX);
+#if VERBOSE
+    Serial.print("Record type "); Serial.println(b, HEX);
+#endif
     if (b == 0x1) {
       // end record!
       break;
@@ -223,12 +231,10 @@ byte* readImagePage (byte* hextext, uint16_t pageaddr, uint8_t pagesize,
     Serial.print("\nLine address =  0x"); Serial.println(lineaddr, HEX);
     Serial.print("Page address =  0x"); Serial.println(pageaddr, HEX);
 #endif
-    for (byte i=0; i < len; i++) {
-      // read 'n' bytes
-      b = hexton(pgm_read_byte(hextext++));
-      b = (b<<4) + hexton(pgm_read_byte(hextext++));
-
+    for (byte i = 0; i < len; i++) {
+      hex = readNextOctet(hex, as_hex, b);
       cksum += b;
+
 #if VERBOSE
       Serial.print(b, HEX);
       Serial.write(' ');
@@ -242,16 +248,18 @@ byte* readImagePage (byte* hextext, uint16_t pageaddr, uint8_t pagesize,
         break;
       }
     }
-    b = hexton(pgm_read_byte(hextext++));  // chxsum
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    // chxsum
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
     if (cksum != 0) {
       error("Bad checksum: ");
       Serial.print(cksum, HEX);
     }
-    if (pgm_read_byte(hextext++) != '\n') {
-      error("No end of line");
-      break;
+    if (as_hex) {
+      if (pgm_read_byte(hex++) != '\n') {
+        error("No end of line");
+        break;
+      }
     }
 #if VERBOSE
     Serial.println();
@@ -264,7 +272,7 @@ byte* readImagePage (byte* hextext, uint16_t pageaddr, uint8_t pagesize,
   Serial.print("\n  Total bytes read: ");
   Serial.println(page_idx, DEC);
 #endif
-  return hextext;
+  return hex;
 }
 
 // Send one byte to the page buffer on the chip
@@ -317,8 +325,8 @@ boolean flashPage (byte *pagebuff, uint16_t pageaddr, uint8_t pagesize) {
 // Thankfully this does not have to be done by pages!
 // returns true if the image is the same as the hextext.
 // returns false on any error.
-boolean verifyImage (byte *hextext) {
-  uint16_t len;
+boolean verifyImage(const byte* hex, boolean as_hex) {
+  uint8_t len;
   byte b, cksum = 0;
 
   SPI.setClockDivider(CLOCKSPEED_FLASH);
@@ -327,28 +335,24 @@ boolean verifyImage (byte *hextext) {
     uint16_t lineaddr;
 
     // read one line!
-    if (pgm_read_byte(hextext++) != ':') {
-      error("No colon");
-      return false;
+    if (as_hex) {
+      if (pgm_read_byte(hex++) != ':') {
+        error("No colon");
+        return false;
+      }
     }
-    len = hexton(pgm_read_byte(hextext++));
-    len = (len<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, len);
     cksum = len;
-
-    b = hexton(pgm_read_byte(hextext++)); // record type
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
     lineaddr = b;
-    b = hexton(pgm_read_byte(hextext++)); // record type
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
     lineaddr = (lineaddr << 8) + b;
-
-    b = hexton(pgm_read_byte(hextext++)); // record type
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
 
-#if 0
+#if VERBOSE
     Serial.print("Record type "); Serial.println(b, HEX);
 #endif
     if (b == 0x1) {
@@ -357,9 +361,7 @@ boolean verifyImage (byte *hextext) {
     }
 
     for (byte i = 0; i < len; i++) {
-      // read 'n' bytes
-      b = hexton(pgm_read_byte(hextext++));
-      b = (b<<4) + hexton(pgm_read_byte(hextext++));
+      hex = readNextOctet(hex, as_hex, b);
       cksum += b;
 
 #if VERBOSE
@@ -401,17 +403,18 @@ boolean verifyImage (byte *hextext) {
       lineaddr++;
     }
 
-    b = hexton(pgm_read_byte(hextext++));  // chxsum
-    b = (b<<4) + hexton(pgm_read_byte(hextext++));
+    hex = readNextOctet(hex, as_hex, b);
     cksum += b;
     if (cksum != 0) {
       error("Bad checksum: ");
       Serial.print(cksum, HEX);
       return false;
     }
-    if (pgm_read_byte(hextext++) != '\n') {
-      error("No end of line");
-      return false;
+    if (as_hex) {
+      if (pgm_read_byte(hex++) != '\n') {
+        error("No end of line");
+        return false;
+      }
     }
   }
   return true;
@@ -440,5 +443,5 @@ uint32_t spi_transaction (uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   n = SPI.transfer(b);
   o = SPI.transfer(c);
   p = SPI.transfer(d);
-  return (m << 24) | (n << 16) | (o << 8) | p;
+  return (m << 24) + (n << 16) + (o << 8) + p;
 }
