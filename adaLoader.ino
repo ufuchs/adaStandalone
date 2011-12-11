@@ -116,7 +116,7 @@ void loop(void) {
     Serial.println("Image interpreted as binary");
   }
 
-#if 0
+#if VERBOSE
   Serial.println(chipsize, DEC);
 #endif
   const byte* original_hex = hex;
@@ -146,7 +146,7 @@ void loop(void) {
   end_pmode();
   start_pmode();
 
-  Serial.println("\nVerifing flash...");
+  Serial.println("\nVerifying flash...");
   if (!verifyImage(original_hex, as_hex) ) {
     error("Failed to verify chip");
   } else {

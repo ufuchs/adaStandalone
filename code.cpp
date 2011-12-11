@@ -189,6 +189,7 @@ const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
   for (uint8_t i = 0; i < pagesize; i++)
     page[i] = 0xFF;
 
+  uint16_t expected_address = 0;
   while (true) {
     uint16_t lineaddr;
 
@@ -217,6 +218,15 @@ const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
       return beginning;
     }
 
+    if (expected_address == 0) {
+      expected_address = lineaddr;
+    } else {
+      if (lineaddr > expected_address) {
+        page_idx += (lineaddr - expected_address);
+        expected_address = lineaddr;
+      }
+    }
+
     // record type
     hex = readNextOctet(hex, as_hex, b);
     cksum += b;
@@ -228,8 +238,9 @@ const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
       break;
     }
 #if VERBOSE
-    Serial.print("\nLine address =  0x"); Serial.println(lineaddr, HEX);
-    Serial.print("Page address =  0x"); Serial.println(pageaddr, HEX);
+    Serial.print("\nLine address = 0x"); Serial.println(lineaddr, HEX);
+    Serial.print("Page address = 0x"); Serial.println(pageaddr, HEX);
+    Serial.print("\nPage index = "); Serial.println(page_idx, HEX);
 #endif
     for (byte i = 0; i < len; i++) {
       hex = readNextOctet(hex, as_hex, b);
@@ -240,13 +251,12 @@ const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
       Serial.write(' ');
 #endif
 
-      page[page_idx] = b;
-      page_idx++;
-
       if (page_idx > pagesize) {
         error("Too much code");
         break;
       }
+      page[page_idx] = b;
+      page_idx++;
     }
     // chxsum
     hex = readNextOctet(hex, as_hex, b);
@@ -267,6 +277,7 @@ const byte* readImagePage(const byte* hex, boolean as_hex, uint16_t pageaddr,
 #endif
     if (page_idx == pagesize)
       break;
+    expected_address += len;
   }
 #if VERBOSE
   Serial.print("\n  Total bytes read: ");

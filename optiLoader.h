@@ -31,7 +31,7 @@ typedef struct image {
   byte fusemask[4];
   uint16_t chipsize;
   byte image_pagesize;  // page size for flash programming
-  byte hexcode[20000];  // intel hex format image
+  byte hexcode[3072];  // intel hex format image
 } image_t;
 
 typedef struct alias {
