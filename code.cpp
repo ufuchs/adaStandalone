@@ -18,12 +18,11 @@ extern uint8_t NUMIMAGES;
 uint16_t readSignature (void) {
   SPI.setClockDivider(CLOCKSPEED_FUSES);
 
-  uint16_t target_type = 0;
-  Serial.print("\nReading signature:");
+  uint32_t target_type = 0;
+  Serial.print("\nReading signature: ");
 
-  target_type = spi_transaction(0x30, 0x00, 0x01, 0x00);
-  target_type <<= 8;
-  target_type |= spi_transaction(0x30, 0x00, 0x02, 0x00);
+  target_type = (spi_transaction(0x30, 0x00, 0x01, 0x00) << 8) |
+    spi_transaction(0x30, 0x00, 0x02, 0x00);
 
   Serial.println(target_type, HEX);
   if (target_type == 0 || target_type == 0xFFFF) {
@@ -441,5 +440,5 @@ uint32_t spi_transaction (uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   n = SPI.transfer(b);
   o = SPI.transfer(c);
   p = SPI.transfer(d);
-  return (m << 24) + (n << 16) + (o << 8) + p;
+  return (m << 24) | (n << 16) | (o << 8) | p;
 }

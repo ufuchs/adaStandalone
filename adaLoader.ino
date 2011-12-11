@@ -79,7 +79,7 @@ void loop(void) {
   uint16_t signature;
   image_t *targetimage;
 
-  if (!(signature = readSignature())) {  // Figure out what kind of CPU
+  if (!(signature = readSignature())) {
     error("Signature fail");
     return;
   }
