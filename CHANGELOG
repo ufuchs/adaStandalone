@@ -1,0 +1,5 @@
+1. The piezo is tested on startup/reset likewise the LEDs.
+
+2. Make the BUTTON more responsible in case of an error.
+
+
