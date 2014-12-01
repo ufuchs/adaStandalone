@@ -39,15 +39,24 @@ byte pageBuffer[128];                  /* One page of flash */
 #define RESET 10
 #define CLOCK 9     // self-generate 8mhz clock - handy!
 
-#define BUTTON 2//A1
-#define PIEZOPIN A3
+#define BUTTON    2 // A1 doesn't allow any interrupt
+#define PIEZOPIN  A3
+#define LED_ERR 8
+#define LED_PROGMODE A0
 
+//
+// setup
+//
 void setup() {
+
   Serial.begin(57600);  // Initialize serial for status msgs
   Serial.println("\nAdaBootLoader Bootstrap programmer "
                  "(originally OptiLoader Bill Westfield (WestfW))");
 
+   // http://www.arduino.cc/en/Reference/PortManipulation
+   // http://www.instructables.com/id/Ghetto-Programming%3A-Getting-started-with-AVR-micro/step10/Explaining-the-software/
   pinMode(LED_PROGMODE, OUTPUT);
+//  DDRD = B11111110;
   pulse(LED_PROGMODE, 2);
 
   pinMode(LED_ERR, OUTPUT);
@@ -69,6 +78,9 @@ void setup() {
   TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10); // no clock prescale
 }
 
+//
+// loop
+//
 void loop(void) {
   Serial.println("\nType 'G' or hit BUTTON for next chip");
   while (true) {
@@ -160,12 +172,16 @@ void loop(void) {
   } else {
     Serial.println("Fuses verified correctly!");
   }
+
   target_poweroff();
+
+  // success
   tone(PIEZOPIN, 523, 100);
   delay(400);
   tone(PIEZOPIN, 523, 200);
   delay(200);
   tone(PIEZOPIN, 698, 800);
+
 }
 
 //
@@ -213,6 +229,9 @@ void error(const char *string) {
 
 }
 
+//
+// start_pmode
+//
 void start_pmode() {
   pinMode(13, INPUT); // restore to default
 
@@ -236,6 +255,9 @@ void start_pmode() {
   pmode = 1;
 }
 
+//
+// end_pmode
+//
 void end_pmode() {
   SPCR = 0;                             /* reset SPI */
   digitalWrite(MISO, 0);                /* Make sure pullups are off too */
@@ -249,10 +271,9 @@ void end_pmode() {
   pmode = 0;
 }
 
-/*
- * target_poweron
- * begin programming
- */
+//
+// target_poweron
+//
 boolean target_poweron() {
   pinMode(LED_PROGMODE, OUTPUT);
   digitalWrite(LED_PROGMODE, HIGH);
@@ -265,6 +286,9 @@ boolean target_poweron() {
   return true;
 }
 
+//
+// target_poweroff
+//
 boolean target_poweroff() {
   end_pmode();
   digitalWrite(LED_PROGMODE, LOW);

@@ -19,8 +19,8 @@
 #define CLOCKSPEED_FUSES   SPI_CLOCK_DIV128
 #define CLOCKSPEED_FLASH   SPI_CLOCK_DIV8
 
-#define LED_ERR 8
-#define LED_PROGMODE A0
+// #define LED_ERR 8
+// #define LED_PROGMODE A0
 
 typedef struct image {
   char image_name[30];  // e.g. "optiboot_diecimila.hex"
