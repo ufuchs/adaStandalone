@@ -53,8 +53,8 @@ void setup() {
   pinMode(LED_ERR, OUTPUT);
   pulse(LED_ERR, 2);
 
-  pinMode(PIEZOPIN, OUTPUT);  // check piezo as well
-  pulse(PIEZOPIN, 2);
+  pinMode(PIEZOPIN, OUTPUT);
+  tone(PIEZOPIN, 523, 100);   // check piezo as well
 
   pinMode(BUTTON, INPUT);     // button for next programming
   digitalWrite(BUTTON, HIGH); // pullup
