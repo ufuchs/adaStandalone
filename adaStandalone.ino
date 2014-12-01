@@ -1,4 +1,4 @@
-// Standalone AVR ISP programmer
+ // Standalone AVR ISP programmer
 // August 2011 by Limor Fried / Ladyada / Adafruit
 // Jan 2011 by Bill Westfield ("WestfW")
 //
@@ -39,7 +39,7 @@ byte pageBuffer[128];                  /* One page of flash */
 #define RESET 10
 #define CLOCK 9     // self-generate 8mhz clock - handy!
 
-#define BUTTON A1
+#define BUTTON 2//A1
 #define PIEZOPIN A3
 
 void setup() {
@@ -47,12 +47,14 @@ void setup() {
   Serial.println("\nAdaBootLoader Bootstrap programmer "
                  "(originally OptiLoader Bill Westfield (WestfW))");
 
-  pinMode(PIEZOPIN, OUTPUT);
-
   pinMode(LED_PROGMODE, OUTPUT);
-  pulse(LED_PROGMODE,2);
+  pulse(LED_PROGMODE, 2);
+
   pinMode(LED_ERR, OUTPUT);
   pulse(LED_ERR, 2);
+
+  pinMode(PIEZOPIN, OUTPUT);  // check piezo as well
+  pulse(PIEZOPIN, 2);
 
   pinMode(BUTTON, INPUT);     // button for next programming
   digitalWrite(BUTTON, HIGH); // pullup
@@ -166,25 +168,49 @@ void loop(void) {
   tone(PIEZOPIN, 698, 800);
 }
 
+//
+// error
+//
 void error(const char *string) {
+
+  digitalWrite(LED_PROGMODE, LOW);
+
   while (!digitalRead(BUTTON))
     ;
+
   Serial.println(string);
+
   target_poweroff();
-  while (digitalRead(BUTTON)) {
-    digitalWrite(LED_ERR, HIGH);
-    digitalWrite(LED_PROGMODE, LOW);
-    tone(PIEZOPIN, 622, 500);
-    delay(500);
-    digitalWrite(LED_ERR, LOW);
-    digitalWrite(LED_PROGMODE, HIGH);
+
+
+
     tone(PIEZOPIN, 460, 500);
     delay(500);
+
+    tone(PIEZOPIN, 460, 500);
+    delay(500);
+
+    tone(PIEZOPIN, 460, 500);
+    delay(500);
+
+  while (digitalRead(BUTTON)) {
+
+    digitalWrite(LED_ERR, HIGH);
+
+//    tone(PIEZOPIN, 460, 500);
+    delay(500);
+
+    digitalWrite(LED_ERR, LOW);
+
+
+    delay(500);
   }
+
   while (!digitalRead(BUTTON))
     ;
+
   digitalWrite(LED_ERR, LOW);
-  digitalWrite(LED_PROGMODE, LOW);
+
 }
 
 void start_pmode() {
