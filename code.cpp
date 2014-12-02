@@ -41,25 +41,36 @@ uint16_t readSignature (void) {
  * search the hex images that we have programmed in flash, looking for one
  * that matches.
  */
-image_t *findImage (uint16_t signature) {
-  image_t *ip;
+imageDesc_t *findImageDesc (uint16_t signature) {
+
+  imageDesc_t *ip;
+
   Serial.println("Searching for image...");
 
-  for (byte i=0; i < NUMIMAGES; i++) {
-    ip = images[i];
+  for (byte i = 0; i < NUMIMAGES; i++) {
 
-    if (ip && (pgm_read_word(&ip->image_chipsig) == signature)) {
+    ip = imageDesc[i];
+
+    if (pgm_read_word(&ip->image_chipsig) == signature) {
+
       Serial.print("  Found \"");
       flashprint(&ip->image_name[0]);
+
       Serial.print("\" for ");
       flashprint(&ip->image_chipname[0]);
+
       Serial.println();
 
       return ip;
+
     }
+
   }
+
   Serial.println(" Not Found");
+
   return 0;
+
 }
 
 /*

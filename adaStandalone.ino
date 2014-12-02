@@ -108,96 +108,16 @@ void loop(void) {
   target_poweron();
 
   uint16_t signature;
-  image_t *targetimage;
+  imageDesc_t *imageDesc;
 
   if (!(signature = readSignature())) {
     error("Signature fail");
     return;
   }
-  if (!(targetimage = findImage(signature))) {  // look for an image
+  if (!(imageDesc = findImageDesc(signature))) {  // look for an image
     error("Image fail");
     return;
   }
-
-  eraseChip();
-
-  // get fuses ready to program
-  if (!programFuses(targetimage->image_progfuses)) {
-    error("Programming Fuses fail");
-    return;
-  }
-
-  if (!verifyFuses(targetimage->image_progfuses, targetimage->fusemask)) {
-    error("Failed to verify fuses");
-    return;
-  }
-
-  end_pmode();
-  start_pmode();
-
-  const byte* hex = targetimage->hexcode;
-  boolean as_hex = pgm_read_byte(hex) == ':';
-  uint16_t pageaddr = 0;
-  uint8_t pagesize = pgm_read_byte(&targetimage->image_pagesize);
-  uint16_t chipsize = pgm_read_word(&targetimage->chipsize);
-
-  if (as_hex) {
-    Serial.println("Image interpreted as text");
-  } else {
-    Serial.println("Image interpreted as binary");
-  }
-
-#if VERBOSE
-  Serial.println(chipsize, DEC);
-#endif
-  const byte* original_hex = hex;
-  while (pageaddr < chipsize) {
-    const byte* hexpos = readImagePage(hex, as_hex, pageaddr, pagesize,
-                                       pageBuffer);
-    boolean blankpage = true;
-    for (uint8_t i = 0; i < pagesize; i++) {
-      if (pageBuffer[i] != 0xFF) blankpage = false;
-    }
-    if (!blankpage) {
-      if (!flashPage(pageBuffer, pageaddr, pagesize)) {
-        error("Flash programming failed");
-        return;
-      }
-    }
-    hex = hexpos;
-    pageaddr += pagesize;
-  }
-
-  // Set fuses to 'final' state
-  if (!programFuses(targetimage->image_normfuses)) {
-    error("Programming Fuses fail");
-    return;
-  }
-
-  end_pmode();
-  start_pmode();
-
-  Serial.println("\nVerifying flash...");
-  if (!verifyImage(original_hex, as_hex) ) {
-    error("Failed to verify chip");
-  } else {
-    Serial.println("\tFlash verified correctly!");
-  }
-
-  if (!verifyFuses(targetimage->image_normfuses, targetimage->fusemask) ) {
-    error("Failed to verify fuses");
-  } else {
-    Serial.println("Fuses verified correctly!");
-  }
-
-  target_poweroff();
-
-  // success
-  tone(PIEZOPIN, 523, 100);
-  delay(400);
-  tone(PIEZOPIN, 523, 200);
-  delay(200);
-  tone(PIEZOPIN, 698, 800);
 
 }
 

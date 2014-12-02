@@ -19,9 +19,7 @@
 #define CLOCKSPEED_FUSES   SPI_CLOCK_DIV128
 #define CLOCKSPEED_FLASH   SPI_CLOCK_DIV8
 
-// #define LED_ERR 8
-// #define LED_PROGMODE A0
-
+/*
 typedef struct image {
   char image_name[30];  // e.g. "optiboot_diecimila.hex"
   char image_chipname[12];  // e.g., "atmega168"
@@ -33,6 +31,28 @@ typedef struct image {
   byte image_pagesize;  // page size for flash programming
   byte hexcode[3072];  // intel hex format image
 } image_t;
+*/
+
+typedef struct imageDesc {
+  char image_name[30];  // e.g. "optiboot_diecimila.hex"
+  char image_chipname[12];  // e.g., "atmega168"
+  uint16_t image_chipsig;  // Low two bytes of signature
+  byte image_progfuses[5];  // fuses to set during programming
+  byte image_normfuses[5];  // fuses to set after programming
+  byte fusemask[4];
+  uint16_t chipsize;
+  byte image_pagesize;  // page size for flash programming
+
+  // define a type!
+  byte* hexcode;  // intel hex format image
+} imageDesc_t;
+
+/*
+typedef struct image__ {
+  uint16_t image_chipsig;  // Low two bytes of signature
+  byte hexcode[3072];  // intel hex format image
+} image_t__;
+*/
 
 // Useful message printing definitions
 #define debug(string) // flashprint(PSTR(string));
@@ -41,7 +61,7 @@ void pulse(int pin, int times);
 void flashprint(const char p[]);
 
 uint32_t spi_transaction(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-image_t* findImage(uint16_t signature);
+imageDesc_t* findImageDesc(uint16_t signature);
 
 uint16_t readSignature(void);
 boolean programFuses(const byte* fuses);
