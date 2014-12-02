@@ -2,4 +2,10 @@
 
 2. Make the BUTTON more responsible in case of an error.
 
+   NOTE: The BUTTON pin has moved to 'Digital I/O' pin 2 to use Interrupt 0.
+         Only pin 2 and pin 3 can catch an external interrupt.
+
+   The option "Type 'G'" to start the programmer is no longer supported.
+   As the project name says -> 'adaStandalone'. Sorry.
+
 
