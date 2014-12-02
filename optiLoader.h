@@ -34,16 +34,8 @@ typedef struct image {
   byte hexcode[3072];  // intel hex format image
 } image_t;
 
-typedef struct alias {
-  char image_chipname[12];
-  uint16_t image_chipsig;
-  image_t* alias_image;
-} alias_t;
-
 // Useful message printing definitions
-
 #define debug(string) // flashprint(PSTR(string));
-
 
 void pulse(int pin, int times);
 void flashprint(const char p[]);
