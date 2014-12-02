@@ -37,26 +37,29 @@ byte pageBuffer[128];                  /* One page of flash */
 #define MISO 12
 #define MOSI 11
 #define RESET 10
-#define CLOCK 9     // self-generate 8mhz clock - handy!
+#define CLOCK 9               // self-generate 8mhz clock - handy!
 
-#define BUTTON    2 // A1 doesn't allow any interrupt
+#define BUTTON    2           // A1 doesn't support any interrupt
 #define PIEZOPIN  A3
 #define LED_ERR 8
 #define LED_PROGMODE A0
+
+long debouncing_time = 15;    //Debouncing time in Milliseconds
+volatile unsigned long last_micros;
+volatile int pressed = 0;
 
 //
 // setup
 //
 void setup() {
 
-  Serial.begin(57600);  // Initialize serial for status msgs
+  Serial.begin(57600);        // Initialize serial for status msgs
   Serial.println("\nAdaBootLoader Bootstrap programmer "
                  "(originally OptiLoader Bill Westfield (WestfW))");
 
    // http://www.arduino.cc/en/Reference/PortManipulation
    // http://www.instructables.com/id/Ghetto-Programming%3A-Getting-started-with-AVR-micro/step10/Explaining-the-software/
   pinMode(LED_PROGMODE, OUTPUT);
-//  DDRD = B11111110;
   pulse(LED_PROGMODE, 2);
 
   pinMode(LED_ERR, OUTPUT);
@@ -67,6 +70,7 @@ void setup() {
 
   pinMode(BUTTON, INPUT);     // button for next programming
   digitalWrite(BUTTON, HIGH); // pullup
+  attachInterrupt(0, buttonISR, LOW);
 
   pinMode(CLOCK, OUTPUT);
   // set up high freq PWM on pin 9 (timer 1)
@@ -79,14 +83,27 @@ void setup() {
 }
 
 //
+// buttonISR
+//
+void buttonISR() {
+
+  if ((long)(micros() - last_micros) >= debouncing_time * 1000) {
+    last_micros = micros();
+    pressed = 1;;
+  }
+
+}
+
+//
 // loop
 //
 void loop(void) {
-  Serial.println("\nType 'G' or hit BUTTON for next chip");
-  while (true) {
-    if ((! digitalRead(BUTTON)) || (Serial.read() == 'G'))
-      break;
-  }
+  Serial.println("\nHit BUTTON for next chip");
+
+  while (!pressed)
+    ;
+
+  pressed = 0;
 
   target_poweron();
 
@@ -189,44 +206,33 @@ void loop(void) {
 //
 void error(const char *string) {
 
-  digitalWrite(LED_PROGMODE, LOW);
-
-  while (!digitalRead(BUTTON))
-    ;
-
   Serial.println(string);
-
   target_poweroff();
 
-
-
-    tone(PIEZOPIN, 460, 500);
-    delay(500);
-
-    tone(PIEZOPIN, 460, 500);
-    delay(500);
-
-    tone(PIEZOPIN, 460, 500);
-    delay(500);
-
-  while (digitalRead(BUTTON)) {
+  do {
 
     digitalWrite(LED_ERR, HIGH);
+    digitalWrite(LED_PROGMODE, LOW);
+    tone(PIEZOPIN, 622, 500);
 
-//    tone(PIEZOPIN, 460, 500);
     delay(500);
+
+    if (pressed) {
+      break;
+    }
 
     digitalWrite(LED_ERR, LOW);
-
+    digitalWrite(LED_PROGMODE, HIGH);
+    tone(PIEZOPIN, 460, 500);
 
     delay(500);
-  }
 
-  while (!digitalRead(BUTTON))
-    ;
+  } while (!pressed);
+
+  pressed = 0;
 
   digitalWrite(LED_ERR, LOW);
-
+  digitalWrite(LED_PROGMODE, LOW);
 }
 
 //
