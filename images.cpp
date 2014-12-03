@@ -1,36 +1,10 @@
 #include "optiLoader.h"
 
-// http://www.engbedded.com/fusecalc/ is good for figuring out fuses.
-// Optiboot is {0x3F, 0xFF, 0xDE, 0x05}
-// Adaboot is {0x3F, 0xFF, 0xDA, 0x05}
-imageDesc_t image_328 PROGMEM = {
-  {"optiboot_atmega328.hex"},
-  {"atmega328"},
-  0x9514,  // Signature bytes for 328 non-P
-  {0x3F, 0xFF, 0xDE, 0x05},  // pre program fuses (prot/lock, low, high, ext)
-  {0x0F, 0x0, 0x0, 0x0},  // post program fuses
-  {0x3F, 0xFF, 0xFF, 0x07},  // fuse mask
-  32768,  // size of chip flash in bytes
-  128,  // size in bytes of flash page
-  &image_328
-};
-
-imageDesc_t image_328p PROGMEM = {
-  {"optiboot_atmega328.hex"},
-  {"atmega328p"},
-  0x950F,  // Signature bytes for 328P
-  {0x3F, 0xFF, 0xDE, 0x05},  // pre program fuses (prot/lock, low, high, ext)
-  {0x0F, 0x0, 0x0, 0x0},  // post program fuses
-  {0x3F, 0xFF, 0xFF, 0x07},  // fuse mask
-  32768,  // size of chip flash in bytes
-  128,  // size in bytes of flash page
-  &image_328
-};
-
 //
 // image_328
 //
 image_t image_328 PROGMEM = {
+  0x950F,
   {
     // octet representation of optiboot_atmega328.hex.
     0x10, 0x7E, 0x00, 0x00, 0x11, 0x24, 0x84, 0xB7, 0x14, 0xBE, 0x81, 0xFF, 0xF0, 0xD0, 0x85, 0xE0, 0x80, 0x93, 0x81, 0x00, 0xF7,
@@ -69,17 +43,41 @@ image_t image_328 PROGMEM = {
   }
 };
 
-/*
- * Table of defined images
- */
-// image_t* images[] = {
-//   &image_328,
-//   &image_328p,
-// };
+// http://www.engbedded.com/fusecalc/ is good for figuring out fuses.
+// Optiboot is {0x3F, 0xFF, 0xDE, 0x05}
+// Adaboot is {0x3F, 0xFF, 0xDA, 0x05}
+imageDesc_t imageDesc_328 PROGMEM = {
+  {"optiboot_atmega328.hex"},
+  {"atmega328"},
+  0x9514,  // Signature bytes for 328 non-P
+  {0x3F, 0xFF, 0xDE, 0x05},  // pre program fuses (prot/lock, low, high, ext)
+  {0x0F, 0x0, 0x0, 0x0},  // post program fuses
+  {0x3F, 0xFF, 0xFF, 0x07},  // fuse mask
+  32768,  // size of chip flash in bytes
+  128,  // size in bytes of flash page
+  &image_328
+};
 
-imageDesc_t* imageDesc[] = {
+imageDesc_t imageDesc_328p PROGMEM = {
+  {"optiboot_atmega328.hex"},
+  {"atmega328p"},
+  0x950F,  // Signature bytes for 328P
+  {0x3F, 0xFF, 0xDE, 0x05},  // pre program fuses (prot/lock, low, high, ext)
+  {0x0F, 0x0, 0x0, 0x0},  // post program fuses
+  {0x3F, 0xFF, 0xFF, 0x07},  // fuse mask
+  32768,  // size of chip flash in bytes
+  128,  // size in bytes of flash page
+  &image_328
+};
+
+
+/*
+ * Table of defined image descritors
+ */
+imageDesc_t* imageDescs[] = {
   &imageDesc_328,
   &imageDesc_328p,
-}
+};
 
-uint8_t NUMIMAGES = 2; //sizeof(images) / sizeof(imagesDesc[0]);
+// uint8_t NUMIMAGES = 2; //sizeof(images) / sizeof(imagesDesc[0]);
+uint8_t NUMIMAGES = sizeof(imageDescs) / sizeof(imageDescs[0]);

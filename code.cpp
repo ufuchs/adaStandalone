@@ -7,7 +7,7 @@
  * and a header attched to identify them
  */
 
-extern image_t *images[];
+extern imageDesc_t* imageDescs[];
 extern uint8_t NUMIMAGES;
 
 /*
@@ -35,7 +35,7 @@ uint16_t readSignature (void) {
 }
 
 /*
- * findImage
+ * findImageDesc
  *
  * given 'signature' loaded with the relevant part of the device signature,
  * search the hex images that we have programmed in flash, looking for one
@@ -43,31 +43,52 @@ uint16_t readSignature (void) {
  */
 imageDesc_t *findImageDesc (uint16_t signature) {
 
-  imageDesc_t *ip;
+  imageDesc_t *id;
 
   Serial.println("Searching for image...");
 
   for (byte i = 0; i < NUMIMAGES; i++) {
 
-    ip = imageDesc[i];
+    id = imageDescs[i];
 
-    if (pgm_read_word(&ip->image_chipsig) == signature) {
+    if (pgm_read_word(&id->image_chipsig) == signature) {
 
       Serial.print("  Found \"");
-      flashprint(&ip->image_name[0]);
+      flashprint(&id->image_name[0]);
 
       Serial.print("\" for ");
-      flashprint(&ip->image_chipname[0]);
+      flashprint(&id->image_chipname[0]);
 
       Serial.println();
 
-      return ip;
+      return id;
 
     }
 
   }
 
   Serial.println(" Not Found");
+
+  return 0;
+
+}
+
+/*
+ * findImage
+ *
+ * given 'signature' loaded with the relevant part of the device signature,
+ * search the hex images that we have programmed in flash, looking for one
+ * that matches.
+ */
+image_t *findImage (uint16_t signature) {
+
+  image_t *ip;
+
+  imageDesc_t *id = findImageDesc(signature);
+
+  if (id != 0)  {
+//    ip = &id->image;
+  }
 
   return 0;
 

@@ -33,6 +33,11 @@ typedef struct image {
 } image_t;
 */
 
+typedef struct image {
+  uint16_t image_chipsig;  // Low two bytes of signature
+  byte hexcode[3072];  // intel hex format image
+} image_t;
+
 typedef struct imageDesc {
   char image_name[30];  // e.g. "optiboot_diecimila.hex"
   char image_chipname[12];  // e.g., "atmega168"
@@ -43,16 +48,8 @@ typedef struct imageDesc {
   uint16_t chipsize;
   byte image_pagesize;  // page size for flash programming
 
-  // define a type!
-  byte* hexcode;  // intel hex format image
+  image_t* image;
 } imageDesc_t;
-
-/*
-typedef struct image__ {
-  uint16_t image_chipsig;  // Low two bytes of signature
-  byte hexcode[3072];  // intel hex format image
-} image_t__;
-*/
 
 // Useful message printing definitions
 #define debug(string) // flashprint(PSTR(string));
