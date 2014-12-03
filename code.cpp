@@ -86,12 +86,17 @@ image_t *findImage (uint16_t signature) {
 
   imageDesc_t *id = findImageDesc(signature);
 
+  return id != 0 ? id->image : 0;
+
+  /*
   if (id != 0)  {
-//    ip = &id->image;
+    ip = id->image;
+
+    return ip;
   }
 
   return 0;
-
+  */
 }
 
 /*

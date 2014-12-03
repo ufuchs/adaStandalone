@@ -33,6 +33,14 @@ typedef struct image {
 } image_t;
 */
 
+typedef struct chip {
+
+  uint16_t sig;
+  char* name;
+
+} chip_t;
+
+
 typedef struct image {
   uint16_t image_chipsig;  // Low two bytes of signature
   byte hexcode[3072];  // intel hex format image

@@ -43,6 +43,8 @@ image_t image_328 PROGMEM = {
   }
 };
 
+chip_t chip[] = {{0x9514, "atmega328"}, {0x950F, "atmega328p"}};
+
 // http://www.engbedded.com/fusecalc/ is good for figuring out fuses.
 // Optiboot is {0x3F, 0xFF, 0xDE, 0x05}
 // Adaboot is {0x3F, 0xFF, 0xDA, 0x05}
