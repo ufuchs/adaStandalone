@@ -7,14 +7,73 @@
  * and a header attched to identify them
  */
 
-extern imageDesc_t* imageDescs[];
+extern image_t *images[];
 extern uint8_t NUMIMAGES;
+
+extern chip_t knownChips[];
 
 /*
  * readSignature
  * read the bottom two signature bytes (if possible) and return them
  * Note that the highest signature byte is the same over all AVRs so we skip it
  */
+uint16_t readChipSignature(void) {
+
+  SPI.setClockDivider(CLOCKSPEED_FUSES);
+
+  return (spi_transaction(0x30, 0x00, 0x01, 0x00) << 8) ||
+    spi_transaction(0x30, 0x00, 0x02, 0x00);
+
+}
+
+//
+// getChipName
+//
+char* mapSignatureToName (uint16_t signature) {
+
+  for (int i = 0; i < 2; i++) {
+
+    chip_t* chip = &knownChips[i];
+
+    if (signature == chip->signature) {
+      return chip->name;
+    }
+
+  }
+
+  return "unkown chip";
+
+}
+
+/*
+ * readSignature
+ * read the bottom two signature bytes (if possible) and return them
+ * Note that the highest signature byte is the same over all AVRs so we skip it
+ */
+uint16_t readSignature (void) {
+
+  uint16_t target_type = readChipSignature();
+
+  Serial.print("\nReading signature:");
+
+  Serial.println(target_type, HEX);
+
+  // switch (target_type)
+
+  if (target_type == 0 || target_type == 0xFFFF) {
+    if (target_type == 0) {
+      Serial.println("  (no target attached?)");
+    }
+  }
+  return target_type;
+}
+
+/*
+ * readSignature
+ * read the bottom two signature bytes (if possible) and return them
+ * Note that the highest signature byte is the same over all AVRs so we skip it
+ */
+/*
 uint16_t readSignature (void) {
   SPI.setClockDivider(CLOCKSPEED_FUSES);
 
@@ -33,45 +92,7 @@ uint16_t readSignature (void) {
   }
   return target_type;
 }
-
-/*
- * findImageDesc
- *
- * given 'signature' loaded with the relevant part of the device signature,
- * search the hex images that we have programmed in flash, looking for one
- * that matches.
- */
-imageDesc_t *findImageDesc (uint16_t signature) {
-
-  imageDesc_t *id;
-
-  Serial.println("Searching for image...");
-
-  for (byte i = 0; i < NUMIMAGES; i++) {
-
-    id = imageDescs[i];
-
-    if (pgm_read_word(&id->image_chipsig) == signature) {
-
-      Serial.print("  Found \"");
-      flashprint(&id->image_name[0]);
-
-      Serial.print("\" for ");
-      flashprint(&id->image_chipname[0]);
-
-      Serial.println();
-
-      return id;
-
-    }
-
-  }
-
-  Serial.println(" Not Found");
-
-  return 0;
-
-}
+*/
 
 /*
  * findImage
@@ -81,22 +102,24 @@ imageDesc_t *findImageDesc (uint16_t signature) {
  * that matches.
  */
 image_t *findImage (uint16_t signature) {
-
   image_t *ip;
+  Serial.println("Searching for image...");
 
-  imageDesc_t *id = findImageDesc(signature);
+  for (byte i=0; i < NUMIMAGES; i++) {
+    ip = images[i];
 
-  return id != 0 ? id->image : 0;
+    if (ip && (pgm_read_word(&ip->image_chipsig) == signature)) {
+      Serial.print("  Found \"");
+      flashprint(&ip->image_name[0]);
+      Serial.print("\" for ");
+      flashprint(&ip->image_chipname[0]);
+      Serial.println();
 
-  /*
-  if (id != 0)  {
-    ip = id->image;
-
-    return ip;
+      return ip;
+    }
   }
-
+  Serial.println(" Not Found");
   return 0;
-  */
 }
 
 /*
