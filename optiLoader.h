@@ -19,13 +19,22 @@
 #define CLOCKSPEED_FUSES   SPI_CLOCK_DIV128
 #define CLOCKSPEED_FLASH   SPI_CLOCK_DIV8
 
-// #define LED_ERR 8
-// #define LED_PROGMODE A0
+//
+// chip
+//
+typedef struct chip {
+  uint16_t signature;         // Low two bytes of signature
+  char* name;           // e.g., "atmega168"
+} chip_t;
 
+//
+// image
+//
 typedef struct image {
-  char image_name[30];  // e.g. "optiboot_diecimila.hex"
-  char image_chipname[12];  // e.g., "atmega168"
-  uint16_t image_chipsig;  // Low two bytes of signature
+  char image_name[40];  // e.g. "optiboot_diecimila.hex"
+
+  uint16_t chips[2];  // Low two bytes of signature
+
   byte image_progfuses[5];  // fuses to set during programming
   byte image_normfuses[5];  // fuses to set after programming
   byte fusemask[4];
@@ -34,16 +43,10 @@ typedef struct image {
   byte hexcode[3072];  // intel hex format image
 } image_t;
 
-typedef struct alias {
-  char image_chipname[12];
-  uint16_t image_chipsig;
-  image_t* alias_image;
-} alias_t;
 
 // Useful message printing definitions
 
 #define debug(string) // flashprint(PSTR(string));
-
 
 void pulse(int pin, int times);
 void flashprint(const char p[]);
