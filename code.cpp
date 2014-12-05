@@ -94,6 +94,25 @@ uint16_t readSignature (void) {
 }
 */
 
+//
+//
+//
+boolean hasSignature (image_t *ip, uint16_t signature) {
+
+  for (byte i = 0; i < 2; i++) {
+
+    int foundSign = pgm_read_word(&ip->chips[i]);
+
+    if (foundSign == signature) {
+      return true;
+    }
+
+  }
+
+  return false;
+
+}
+
 /*
  * findImage
  *
@@ -102,24 +121,36 @@ uint16_t readSignature (void) {
  * that matches.
  */
 image_t *findImage (uint16_t signature) {
+
   image_t *ip;
+
   Serial.println("Searching for image...");
 
   for (byte i=0; i < NUMIMAGES; i++) {
+
     ip = images[i];
 
     if (ip && (pgm_read_word(&ip->image_chipsig) == signature)) {
+
       Serial.print("  Found \"");
+
       flashprint(&ip->image_name[0]);
+
       Serial.print("\" for ");
+
       flashprint(&ip->image_chipname[0]);
+
       Serial.println();
 
       return ip;
     }
+
   }
+
   Serial.println(" Not Found");
+
   return 0;
+
 }
 
 /*
