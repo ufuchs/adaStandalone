@@ -10,28 +10,76 @@
 extern image_t *images[];
 extern uint8_t NUMIMAGES;
 
+extern chip_t knownChips[];
+
+//
+// getChipName
+//
+char* mapSignatureToName (const uint16_t signature) {
+
+  for (int i = 0; i < 2; i++) {
+
+    chip_t chip = knownChips[i];
+
+    if (signature == chip.signature) {
+      return chip.name;
+    }
+
+  }
+
+  return "unkown chip";
+
+}
+
 /*
  * readSignature
  * read the bottom two signature bytes (if possible) and return them
  * Note that the highest signature byte is the same over all AVRs so we skip it
  */
 uint16_t readSignature (void) {
+
   SPI.setClockDivider(CLOCKSPEED_FUSES);
 
-  uint16_t target_type = 0;
-  Serial.print("\nReading signature:");
+  uint16_t signature = (spi_transaction(0x30, 0x00, 0x01, 0x00) << 8) |
+    spi_transaction(0x30, 0x00, 0x02, 0x00);
 
-  target_type = spi_transaction(0x30, 0x00, 0x01, 0x00);
-  target_type <<= 8;
-  target_type |= spi_transaction(0x30, 0x00, 0x02, 0x00);
+  Serial.print("\nReading signature: ");
 
-  Serial.println(target_type, HEX);
-  if (target_type == 0 || target_type == 0xFFFF) {
-    if (target_type == 0) {
-      Serial.println("  (no target attached?)");
-    }
+  Serial.print(signature, HEX);
+
+  Serial.print(" -> ");
+
+  if (signature == 0) {
+
+    Serial.println("no target attached?");
+
+  } else {
+
+    Serial.println(mapSignatureToName(signature));
+
   }
-  return target_type;
+
+  return signature;
+
+}
+
+//
+//
+//
+boolean hasSignature (image_t *ip, uint16_t signature) {
+
+  for (byte i = 0; i < 2; i++) {
+
+    int foundSign = pgm_read_word(&ip->chips[i]);
+
+    if (foundSign == signature) {
+      return true;
+    }
+
+  }
+
+  return false;
+
 }
 
 /*
@@ -42,24 +90,30 @@ uint16_t readSignature (void) {
  * that matches.
  */
 image_t *findImage (uint16_t signature) {
-  image_t *ip;
-  Serial.println("Searching for image...");
 
-  for (byte i=0; i < NUMIMAGES; i++) {
+  image_t *ip;
+
+  Serial.print("Matching OPTIBOOT image -> ");
+
+  for (byte i = 0; i < NUMIMAGES; i++) {
+
     ip = images[i];
 
-    if (ip && (pgm_read_word(&ip->image_chipsig) == signature)) {
-      Serial.print("  Found \"");
+    if (hasSignature(ip, signature)) {
+
       flashprint(&ip->image_name[0]);
-      Serial.print("\" for ");
-      flashprint(&ip->image_chipname[0]);
+
       Serial.println();
 
       return ip;
     }
+
   }
-  Serial.println(" Not Found");
+
+  Serial.println("not available");
+
   return 0;
+
 }
 
 /*

@@ -43,6 +43,7 @@ byte pageBuffer[128];                  /* One page of flash */
 #define PIEZOPIN  A3
 #define LED_ERR 8
 #define LED_PROGMODE A0
+#define POWER A4
 
 long debouncing_time = 15;    //Debouncing time in Milliseconds
 volatile unsigned long last_micros;
@@ -72,14 +73,21 @@ void setup() {
   digitalWrite(BUTTON, HIGH); // pullup
   attachInterrupt(0, buttonISR, LOW);
 
+  pinMode(POWER, OUTPUT);
+  digitalWrite(POWER, LOW);
+
+  // Serial.println(OCR1A, HEX);
+  // Serial.println(ICR1, HEX);
+  // Serial.println(TCCR1A, HEX);
+  // Serial.println(TCCR1B, HEX);
+
   pinMode(CLOCK, OUTPUT);
-  // set up high freq PWM on pin 9 (timer 1)
-  // 50% duty cycle -> 8 MHz
-  OCR1A = 0;
-  ICR1 = 1;
-  // OC1A output, fast PWM
-  TCCR1A = _BV(WGM11) | _BV(COM1A1);
-  TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10); // no clock prescale
+
+  // Serial.println(OCR1A, HEX);
+  // Serial.println(ICR1, HEX);
+  // Serial.println(TCCR1A, HEX);
+  // Serial.println(TCCR1B, HEX);
+
 }
 
 //
@@ -98,6 +106,9 @@ void buttonISR() {
 // loop
 //
 void loop(void) {
+
+//  digitalWrite(POWER, LOW);
+
   Serial.println("\nHit BUTTON for next chip");
 
   while (!pressed)
@@ -107,13 +118,14 @@ void loop(void) {
 
   target_poweron();
 
-  uint16_t signature;
+  uint16_t signature = readSignature();
   image_t *targetimage;
 
-  if (!(signature = readSignature())) {
+  if (!signature) {
     error("Signature fail");
     return;
   }
+
   if (!(targetimage = findImage(signature))) {  // look for an image
     error("Image fail");
     return;
@@ -281,7 +293,19 @@ void end_pmode() {
 // target_poweron
 //
 boolean target_poweron() {
+
+  // set up high freq PWM on pin 9 (timer 1)
+  // 50% duty cycle -> 8 MHz
+  OCR1A = 0;
+  ICR1 = 1;
+  // OC1A output, fast PWM
+  TCCR1A = _BV(WGM11) | _BV(COM1A1);
+  TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10); // no clock prescale
+
+  delay(100);
+
   pinMode(LED_PROGMODE, OUTPUT);
+  digitalWrite(POWER, HIGH);
   digitalWrite(LED_PROGMODE, HIGH);
   digitalWrite(RESET, LOW);  // reset it right away.
   pinMode(RESET, OUTPUT);
@@ -296,7 +320,16 @@ boolean target_poweron() {
 // target_poweroff
 //
 boolean target_poweroff() {
+
+  OCR1A = 0;
+  ICR1 = 0xEB;
+  TCCR1A = 1;
+  TCCR1B = 3; // no clock prescale
+
+  delay(100);
+
   end_pmode();
   digitalWrite(LED_PROGMODE, LOW);
+  digitalWrite(POWER, LOW);
   return true;
 }
